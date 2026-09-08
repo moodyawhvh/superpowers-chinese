@@ -1,8 +1,8 @@
 /**
- * Superpowers plugin for OpenCode.ai
+ * OpenCode.ai 的 Superpowers 插件
  *
- * Injects superpowers bootstrap context via message transform.
- * Auto-registers skills directory via config hook (no symlinks needed).
+ * 通过消息变换(message transform)注入 superpowers 引导(bootstrap)上下文。
+ * 通过 config 钩子自动注册 skills 目录(无需符号链接)。
  */
 
 import path from 'path';
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Simple frontmatter extraction (avoid dependency on skills-core for bootstrap)
+// 简单的 frontmatter 提取(引导流程避免依赖 skills-core)
 const extractAndStripFrontmatter = (content) => {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) return { frontmatter: {}, content };
@@ -33,7 +33,7 @@ const extractAndStripFrontmatter = (content) => {
   return { frontmatter, content: body };
 };
 
-// Normalize a path: trim whitespace, expand ~, resolve to absolute
+// 规范化路径:去除首尾空白,展开 ~,解析为绝对路径
 const normalizePath = (p, homeDir) => {
   if (!p || typeof p !== 'string') return null;
   let normalized = p.trim();
@@ -46,11 +46,11 @@ const normalizePath = (p, homeDir) => {
   return path.resolve(normalized);
 };
 
-// Module-level cache for bootstrap content.
-// The SKILL.md file does not change during a session, so reading + parsing it
-// once eliminates redundant fs.existsSync + fs.readFileSync + regex work on
-// every agent step.  See #1202 for the full analysis.
-let _bootstrapCache = undefined; // undefined = not yet loaded, null = file missing
+// 引导内容的模块级缓存。
+// SKILL.md 文件在会话期间不会变化,因此只需读取并解析一次,
+// 即可省去每个 agent 步骤中重复的 fs.existsSync + fs.readFileSync
+// 和正则处理。完整分析参见 #1202。
+let _bootstrapCache = undefined; // undefined = 尚未加载,null = 文件缺失
 
 export const SuperpowersPlugin = async ({ client, directory }) => {
   const homeDir = os.homedir();
@@ -58,12 +58,12 @@ export const SuperpowersPlugin = async ({ client, directory }) => {
   const envConfigDir = normalizePath(process.env.OPENCODE_CONFIG_DIR, homeDir);
   const configDir = envConfigDir || path.join(homeDir, '.config/opencode');
 
-  // Helper to generate bootstrap content (cached after first call)
+  // 生成引导内容的辅助函数(首次调用后缓存)
   const getBootstrapContent = () => {
-    // Return cached result on subsequent calls
+    // 后续调用直接返回缓存结果
     if (_bootstrapCache !== undefined) return _bootstrapCache;
 
-    // Try to load using-superpowers skill
+    // 尝试加载 using-superpowers 技能
     const skillPath = path.join(superpowersSkillsDir, 'using-superpowers', 'SKILL.md');
     if (!fs.existsSync(skillPath)) {
       _bootstrapCache = null;
@@ -100,10 +100,10 @@ ${toolMapping}
   };
 
   return {
-    // Inject skills path into live config so OpenCode discovers superpowers skills
-    // without requiring manual symlinks or config file edits.
-    // This works because Config.get() returns a cached singleton — modifications
-    // here are visible when skills are lazily discovered later.
+    // 将 skills 路径注入运行时配置,让 OpenCode 无需手动符号链接
+    // 或修改配置文件即可发现 superpowers 技能。
+    // 之所以可行,是因为 Config.get() 返回的是缓存的单例 —— 这里的修改
+    // 在之后惰性发现技能时是可见的。
     config: async (config) => {
       config.skills = config.skills || {};
       config.skills.paths = config.skills.paths || [];
@@ -112,24 +112,24 @@ ${toolMapping}
       }
     },
 
-    // Inject bootstrap into the first user message of each session.
-    // Using a user message instead of a system message avoids:
-    //   1. Token bloat from system messages repeated every turn (#750)
-    //   2. Multiple system messages breaking Qwen and other models (#894)
+    // 将引导内容注入每个会话的第一条用户消息。
+    // 使用用户消息而非系统消息可以避免:
+    //   1. 系统消息每轮重复导致的 token 膨胀 (#750)
+    //   2. 多条系统消息破坏 Qwen 及其他模型 (#894)
     //
-    // The hook fires on every agent step (not just every turn) because
-    // opencode's prompt.ts reloads messages from DB each step.  Fresh message
-    // arrays may need injection again, so getBootstrapContent() must not do
-    // repeated disk work.
+    // 该钩子在每个 agent 步骤都会触发(而不只是每一轮),因为
+    // opencode 的 prompt.ts 每一步都会从数据库重新加载消息。新的消息
+    // 数组可能需要再次注入,因此 getBootstrapContent() 不能
+    // 做重复的磁盘操作。
     'experimental.chat.messages.transform': async (_input, output) => {
       const bootstrap = getBootstrapContent();
       if (!bootstrap || !output.messages.length) return;
       const firstUser = output.messages.find(m => m.info.role === 'user');
       if (!firstUser || !firstUser.parts.length) return;
 
-      // Guard: skip if first user message already contains bootstrap.
-      // This prevents double injection when OpenCode passes an already
-      // transformed in-memory message array through the hook again.
+      // 防护:若第一条用户消息已包含引导内容则跳过。
+      // 这可以防止 OpenCode 把已经转换过的内存中消息数组再次
+      // 传入钩子时发生重复注入。
       if (firstUser.parts.some(p => p.type === 'text' && p.text.includes('EXTREMELY_IMPORTANT'))) return;
 
       const ref = firstUser.parts[0];

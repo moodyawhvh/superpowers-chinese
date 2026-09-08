@@ -1,94 +1,96 @@
-# Platform-neutral prose — Phase A design
+> 🌐 本文档由 [obra/superpowers](https://github.com/obra/superpowers) 翻译,英文原版见原项目。
 
-## Background
+# 平台中立文案 —— Phase A 设计
 
-Superpowers ships to multiple agent runtimes (Claude Code, Codex, Cursor, OpenCode, Copilot CLI, Gemini CLI). Skill content and supporting docs were written first for Claude Code and use "Claude" in places where any runtime's agent applies. OpenAI's vendored fork (openai/plugins#217) attempted a wholesale rewrite that was actively wrong in places — rewriting historical attribution paths, model names, and platform-specific install instructions — and we want to avoid that mistake while still removing platform-centric prose where it is genuinely incidental.
+## 背景
 
-The full effort is broken into phases by reference category. **This spec covers Phase A only:** generic third-person prose mentioning "Claude" in non-platform-specific contexts. Later phases (config-file references, marketing copy, tool-name references) are out of scope here and will get their own specs.
+Superpowers 会发布到多个 agent 运行时(Claude Code、Codex、Cursor、OpenCode、Copilot CLI、Gemini CLI)。技能内容与配套文档最初是为 Claude Code 编写的,在适用于任何运行时 agent 的地方也写成了 "Claude"。OpenAI 的内部 fork(openai/plugins#217)曾尝试整体重写,结果多处改得明显有错——重写了历史归因路径、模型名称和平台相关的安装说明——我们希望在避免这一错误的同时,把那些确实只是附带提法的平台中心化文案清理掉。
 
-## In scope
+整个工作按引用类别分成多个阶段。**本规范只覆盖 Phase A:**在非平台特定语境下提及 "Claude" 的泛化第三人称文案。后续阶段(配置文件引用、宣传文案、工具名引用)不在本篇范围内,会另有规范。
 
-Generic prose mentions of "Claude" in:
+## 范围内
 
-- `skills/*/SKILL.md` and supporting `.md` files in active skill directories
+以下位置中泛化文案里对 "Claude" 的提及:
+
+- `skills/*/SKILL.md` 以及活跃技能目录中的配套 `.md` 文件
 - `skills/writing-skills/anthropic-best-practices.md`
-- `README.md` (only where the mention is generic prose, not platform marketing)
+- `README.md`(仅限泛化文案的提及,不含平台宣传)
 
-Plus one coined-term rename: **Claude Search Optimization (CSO) → Skill Discovery Optimization (SDO)** in `skills/writing-skills/SKILL.md`.
+外加一个造词改名:**Claude Search Optimization(CSO)→ Skill Discovery Optimization(SDO)**,位于 `skills/writing-skills/SKILL.md`。
 
-## Out of scope
+## 范围外
 
-- **Platform/runtime statements** — "In Claude Code:", install instructions, tool-mapping references. (Phase D candidate.)
-- **Config-file references** — CLAUDE.md, AGENTS.md, GEMINI.md priority lists and "where to put project conventions" callouts. (Phase B.)
-- **Tool-name references** — `Skill`, `Bash`, `Read`, `Task`, `TodoWrite`. Skills are written in Claude Code's tool vocabulary; the existing `references/{codex,copilot,gemini}-tools.md` files map them. (At the time this spec was written, the plan was to defer or skip these. Phase E ended up doing them — replacing tool names with action language across active skills and unifying the platform-tools refs around the same vocabulary.)
-- **Marketing copy** in README — "Superpowers for Claude Code", platform-named install sections. (Phase C.)
-- **Historical artifacts** — `docs/plans/*.md`, `docs/superpowers/specs/*.md`, `CREATION-LOG.md`. These are dated, point-in-time documents; rewriting them rewrites history.
-- **Model identifiers** — Claude Haiku / Sonnet / Opus. These are real product names.
-- **Filename / URL references** — `CLAUDE.md`, `claude.com`, `claude-plugin/`, paths under `~/.claude/`.
-- **`anthropic-best-practices.md` filename** — the file remains named after its source even though we rewrite the prose inside it.
+- **平台/运行时陈述** —— "In Claude Code:"、安装说明、工具映射引用。(Phase D 候选。)
+- **配置文件引用** —— CLAUDE.md、AGENTS.md、GEMINI.md 优先级列表,以及"项目约定放哪里"的提示。(Phase B。)
+- **工具名引用** —— `Skill`、`Bash`、`Read`、`Task`、`TodoWrite`。技能是以 Claude Code 的工具词汇编写的,现有的 `references/{codex,copilot,gemini}-tools.md` 文件负责映射它们。(撰写本规范时,计划是推迟或跳过这些;Phase E 最终完成了——在活跃技能中用动作语言替换工具名,并把平台工具 refs 统一到同一套词汇。)
+- **README 中的宣传文案** —— "Superpowers for Claude Code"、以平台命名的安装章节。(Phase C。)
+- **历史产物** —— `docs/plans/*.md`、`docs/superpowers/specs/*.md`、`CREATION-LOG.md`。这些是带日期的时间点文档,重写它们等于改写历史。
+- **模型标识符** —— Claude Haiku / Sonnet / Opus。这些是真实的产品名。
+- **文件名 / URL 引用** —— `CLAUDE.md`、`claude.com`、`claude-plugin/`、`~/.claude/` 下的路径。
+- **`anthropic-best-practices.md` 文件名** —— 该文件仍以来源命名,尽管其中的正文会被重写。
 
-## Replacement style
+## 替换风格
 
-Use a mix that reads naturally in English:
+使用在英文中读起来自然的混合风格:
 
-- **Second person — "your agent"** when addressing the skill author about *their* runtime
+- **第二人称 —— "your agent"**:当对技能作者谈*他们*的运行时时
   - "your agent reads the description"
-- **Third person — "the agent" / "agents" / "an agent"** when describing system behavior generically
+- **第三人称 —— "the agent" / "agents" / "an agent"**:当泛化描述系统行为时
   - "Future agents find your skills"
   - "Use words an agent would search for"
   - "Agents read SKILL.md only when the skill becomes relevant"
 
-Pick whichever fits the surrounding sentence; do not force consistency at the cost of awkward phrasing. Pluralize when natural ("future agents", "agents read") rather than always saying "the agent".
+选贴合上下文句子的一种;不要为强行一致而拗口。在自然的地方用复数("future agents"、"agents read"),而不是总说 "the agent"。
 
-### Carve-outs that stay as "Claude"
+### 保留为 "Claude" 的例外
 
-- Model names: Claude Haiku, Claude Sonnet, Claude Opus
-- Filenames and URLs: `CLAUDE.md`, `claude.com`, `~/.claude/`
-- Branded platform name "Claude Code" wherever it refers to the runtime as such (handled in later phases)
+- 模型名:Claude Haiku、Claude Sonnet、Claude Opus
+- 文件名和 URL:`CLAUDE.md`、`claude.com`、`~/.claude/`
+- 品牌平台名 "Claude Code",凡是明确指该运行时本身时(后续阶段处理)
 
-### Coined-term rename
+### 造词改名
 
-- **Claude Search Optimization (CSO) → Skill Discovery Optimization (SDO)**
-  - Appears in `skills/writing-skills/SKILL.md` as a section heading and in nearby prose. Rename the heading, the acronym, and any in-file cross-references.
+- **Claude Search Optimization(CSO)→ Skill Discovery Optimization(SDO)**
+  - 出现在 `skills/writing-skills/SKILL.md` 的一个章节标题及附近文案中。改掉标题、缩写以及文件内的所有交叉引用。
 
-## Files affected
+## 受影响文件
 
-Approximate counts based on a `grep` filtered to exclude carve-outs:
+基于一次过滤掉例外情况的 `grep` 得到的近似统计:
 
-| File | Generic-prose mentions |
+| 文件 | 泛化文案提及数 |
 |------|------------------------|
-| `skills/writing-skills/SKILL.md` | ~12 (includes CSO heading + body) |
+| `skills/writing-skills/SKILL.md` | ~12(含 CSO 标题及正文) |
 | `skills/writing-skills/anthropic-best-practices.md` | ~30 |
-| `skills/writing-skills/examples/CLAUDE_MD_TESTING.md` | ~1 — filename stays (it's a CLAUDE.md test artifact); the "Variant C: Claude.AI Emphatic Style" heading also stays (it's a label naming a specific style) |
+| `skills/writing-skills/examples/CLAUDE_MD_TESTING.md` | ~1 —— 文件名保留(它是一个 CLAUDE.md 测试产物);"Variant C: Claude.AI Emphatic Style" 标题也保留(它是命名某种具体风格的标签) |
 | `README.md` | ~1 |
 
-Final list confirmed during implementation by re-running the filtered grep.
+最终清单在实现过程中通过重新运行过滤后的 grep 确认。
 
-## Commit plan
+## 提交计划
 
-Four atomic commits, in order:
+四个原子提交,按顺序:
 
-1. **Rename CSO → SDO** in `skills/writing-skills/SKILL.md`. Mechanical, isolated, easy to revert if we change our minds about the term.
-2. **Active skills prose** — generic "Claude" → "agent" forms across `skills/*/SKILL.md` and supporting `.md`, excluding `anthropic-best-practices.md`.
-3. **`anthropic-best-practices.md` prose** — same substitution rules. Separate commit because this file is a vendored adaptation of an external doc; isolating the change makes future reconciliation with upstream easier to read.
-4. **README.md prose** *(only if any generic-prose mentions remain after filtering)*. Skipped if empty.
+1. **在 `skills/writing-skills/SKILL.md` 中把 CSO 改名为 SDO**。机械、独立,若我们对这个术语改主意也容易回滚。
+2. **活跃技能文案** —— 在 `skills/*/SKILL.md` 与配套 `.md` 中把泛化的 "Claude" 替换为 "agent" 形式,`anthropic-best-practices.md` 除外。
+3. **`anthropic-best-practices.md` 文案** —— 同样的替换规则。单独提交是因为该文件是对外部文档的内部改编;隔离改动能让将来与上游对账更易读。
+4. **README.md 文案** *(仅在过滤后仍有泛化文案提及时)*。若无则跳过。
 
-Each commit message names the phase ("Phase A") and the slice ("rename CSO to SDO", "agent prose in active skills", etc.) so the series is self-documenting.
+每条提交信息注明阶段("Phase A")与切片("rename CSO to SDO"、"agent prose in active skills" 等),让整个提交系列自解释。
 
-## Verification
+## 验证
 
-After each commit:
+每个提交之后:
 
-- `grep -rn "Claude" <touched-paths>` — every remaining hit must fall into a documented carve-out (model name, filename, URL, "Claude Code" platform name, historical artifact).
-- Read the touched file end-to-end — substitutions should not have broken sentence flow, pronoun agreement, or list parallelism.
-- No tests to run; this is prose-only.
+- `grep -rn "Claude" <touched-paths>` —— 每个剩余命中都必须落入已记录的例外(模型名、文件名、URL、"Claude Code" 平台名、历史产物)。
+- 通读被改文件 —— 替换不应破坏句子流畅性、代词一致性或列表的并列结构。
+- 无需运行测试;这是纯文案改动。
 
-After the final commit:
+最后一个提交之后:
 
-- Skim each modified skill in a live session to confirm nothing reads awkwardly.
+- 在真实会话中快速浏览每个被修改的技能,确认没有读起来别扭的地方。
 
-## Non-goals
+## 非目标
 
-- Do not change behavior, structure, headings (other than CSO→SDO), examples, code blocks, or YAML frontmatter.
-- Do not introduce new sections, callouts, or compatibility notes.
-- Do not "improve" prose beyond the substitution while editing.
+- 不改行为、结构、标题(CSO→SDO 除外)、示例、代码块或 YAML frontmatter。
+- 不新增章节、提示框或兼容性说明。
+- 编辑时不做替换之外的"改进"。

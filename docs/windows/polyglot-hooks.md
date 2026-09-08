@@ -1,42 +1,38 @@
-# Cross-Platform Polyglot Hooks for Claude Code
+> 🌐 本文档由 [obra/superpowers](https://github.com/obra/superpowers) 翻译,英文原版见原项目。
 
-Claude Code plugins need hooks that work on Windows, macOS, and Linux. This document describes the single generic dispatcher pattern used in `hooks/run-hook.cmd`.
+# 面向 Claude Code 的跨平台 Polyglot Hooks
 
-> **Authoritative source:** `hooks/run-hook.cmd` is the canonical implementation. When this document and the code diverge, trust the code.
+Claude Code 插件需要能在 Windows、macOS 和 Linux 上正常工作的 hooks。本文档描述 `hooks/run-hook.cmd` 所采用的单一通用 dispatcher 模式。
 
-## The Problem
+> **权威来源:** `hooks/run-hook.cmd` 是标准实现。当本文档与代码不一致时,以代码为准。
 
-Claude Code runs hook commands through a shell:
-- **macOS/Linux**: bash or sh
-- **Windows with Git Bash installed**: Git Bash
-- **Windows without Git Bash**: PowerShell (older versions used CMD.exe)
+## 问题所在
 
-Neither Windows fallback shell can parse our command string: PowerShell treats
-a leading quoted path as a string expression and errors on the next bareword,
-and CMD.exe's `/c` quoting rules strip the outer quotes when the path contains
-a metacharacter such as `(`. Our hooks therefore declare `"shell": "bash"`
-(supported since Claude Code 2.1.81; older versions ignore the key), which
-forces the Git Bash route and, when Git Bash is absent, produces an actionable
-"install Git for Windows" error instead of a shell parser failure.
+Claude Code 通过 shell 执行 hook 命令:
+- **macOS/Linux**:bash 或 sh
+- **安装了 Git Bash 的 Windows**:Git Bash
+- **未安装 Git Bash 的 Windows**:PowerShell(旧版本使用 CMD.exe)
 
-This creates several challenges:
+这两个 Windows 回退 shell 都无法解析我们的命令字符串:PowerShell 会把开头的带引号路径当作字符串表达式,并在随后的裸词处报错;CMD.exe 的 `/c` 引号规则则在路径包含 `(` 这类元字符时剥掉外层引号。因此我们的 hooks 显式声明 `"shell": "bash"`(自 Claude Code 2.1.81 起支持;旧版本会忽略该键),强制走 Git Bash 路线,并在缺少 Git Bash 时给出可操作的"安装 Git for Windows"错误提示,而不是 shell 解析失败。
 
-1. **Script execution**: Windows CMD can't execute `.sh` files directly
-2. **Path format**: Windows uses backslashes (`C:\path`), Unix uses forward slashes (`/path`)
-3. **Environment variables**: `$VAR` syntax doesn't work in CMD
-4. **`.sh` auto-prepend**: Claude Code on Windows automatically prepends `bash` to any command that contains `.sh` in its path — this interferes with the dispatcher if scripts have extensions
+这带来了几个挑战:
 
-## The Solution: Extensionless Scripts + Single Generic Dispatcher
+1. **脚本执行**:Windows CMD 无法直接执行 `.sh` 文件
+2. **路径格式**:Windows 使用反斜杠(`C:\path`),Unix 使用正斜杠(`/path`)
+3. **环境变量**:`$VAR` 语法在 CMD 中不起作用
+4. **`.sh` 自动前置**:Windows 上的 Claude Code 会自动给路径中包含 `.sh` 的命令前置 `bash` —— 如果脚本带扩展名,就会干扰 dispatcher
 
-The repo uses one generic `run-hook.cmd` dispatcher for all hooks. Hook scripts are **extensionless** (`session-start`, not `session-start.sh`). This is deliberate: it prevents Claude Code's Windows auto-detection from prepending `bash` to the dispatcher command and breaking it.
+## 解决方案:无扩展名脚本 + 单一通用 Dispatcher
 
-### File Structure
+本仓库为所有 hooks 使用一个通用的 `run-hook.cmd` dispatcher。Hook 脚本**不带扩展名**(`session-start`,而不是 `session-start.sh`)。这是有意为之:防止 Claude Code 的 Windows 自动检测机制给 dispatcher 命令前置 `bash` 从而破坏它。
+
+### 文件结构
 
 ```
 hooks/
-├── hooks.json          # Points to run-hook.cmd with extensionless script name
-├── run-hook.cmd        # Cross-platform dispatcher (the polyglot wrapper)
-└── session-start       # Actual hook logic — extensionless bash script
+├── hooks.json          # 指向 run-hook.cmd,使用无扩展名的脚本名
+├── run-hook.cmd        # 跨平台 dispatcher(polyglot 包装器)
+└── session-start       # 实际的 hook 逻辑 —— 无扩展名的 bash 脚本
 ```
 
 ### hooks.json
@@ -61,62 +57,54 @@ hooks/
 }
 ```
 
-The path is quoted because `${CLAUDE_PLUGIN_ROOT}` may contain spaces.
+路径加了引号,因为 `${CLAUDE_PLUGIN_ROOT}` 可能包含空格。
 
-## How `run-hook.cmd` Works at a High Level
+## `run-hook.cmd` 的高层工作原理
 
-`run-hook.cmd` is a polyglot script: Windows treats the first block as batch
-commands, while Unix shells treat that block as a no-op heredoc and continue
-after it.
+`run-hook.cmd` 是一个 polyglot 脚本:Windows 把第一个代码块当作 batch 命令执行,而 Unix shell 把该块视为一个空操作的 heredoc,并继续执行其后的内容。
 
-Do not copy an implementation from this document. Read `hooks/run-hook.cmd`
-directly when changing the dispatcher, and run `tests/hooks/test-session-start.sh`
-afterward.
+不要照抄本文档中的实现。修改 dispatcher 时请直接阅读 `hooks/run-hook.cmd`,完成后运行 `tests/hooks/test-session-start.sh`。
 
-### How it works on Windows (CMD.exe)
+### 在 Windows(CMD.exe)上的工作方式
 
-1. The batch section validates the script name and resolves the hook directory
-   from the dispatcher's own location.
-2. It tries bash in three places:
+1. batch 段校验脚本名,并根据 dispatcher 自身所在位置解析 hook 目录。
+2. 在三个位置尝试 bash:
    - `C:\Program Files\Git\bin\bash.exe`
    - `C:\Program Files (x86)\Git\bin\bash.exe`
-   - `bash` on `PATH` (MSYS2, Cygwin, or a non-default Git install)
-3. If bash is found, it runs the named extensionless hook script from the hooks
-   directory.
-4. If no bash is found, the dispatcher exits `0` silently — the plugin
-   continues working, it just skips the hook.
-5. `exit /b` stops CMD before it reaches the Unix section.
+   - `PATH` 上的 `bash`(MSYS2、Cygwin,或非默认位置的 Git 安装)
+3. 找到 bash 后,从 hooks 目录运行指定名称的无扩展名 hook 脚本。
+4. 找不到 bash 时,dispatcher 静默退出(`0`)—— 插件继续工作,只是跳过该 hook。
+5. `exit /b` 让 CMD 在到达 Unix 段之前停止。
 
-### How it works on Unix (bash/sh)
+### 在 Unix(bash/sh)上的工作方式
 
-1. `: << 'CMDBLOCK'` opens a heredoc on a no-op command.
-2. The entire CMD batch block is consumed by the heredoc and ignored.
-3. After `CMDBLOCK`, bash resolves the script directory and `exec`s the named
-   extensionless script directly.
+1. `: << 'CMDBLOCK'` 在一个空操作命令上打开 heredoc。
+2. 整个 CMD batch 块被 heredoc 吞掉并忽略。
+3. `CMDBLOCK` 之后,bash 解析脚本所在目录,并直接 `exec` 指定的无扩展名脚本。
 
-### Key design decisions
+### 关键设计决策
 
-| Decision | Why |
-|----------|-----|
-| Extensionless scripts | Prevents Claude Code's Windows `.sh`-auto-prepend from interfering with the dispatcher command |
-| No `-l` (login shell) | Not needed; hook scripts should be self-contained and not depend on login-shell PATH setup |
-| No `cygpath` | Bash receives the Windows path directly and handles it correctly; `cygpath` was needed by the old `-c "..."` invocation pattern, not by direct exec |
-| Silent exit on no-bash | Avoids breaking the plugin for users who don't have Git for Windows; hook context injection is skipped gracefully |
+| 决策 | 原因 |
+|------|------|
+| 无扩展名脚本 | 防止 Claude Code 的 Windows `.sh` 自动前置机制干扰 dispatcher 命令 |
+| 不使用 `-l`(登录 shell) | 没有必要;hook 脚本应当自包含,不依赖登录 shell 的 PATH 设置 |
+| 不使用 `cygpath` | bash 直接接收 Windows 路径并能正确处理;旧的 `-c "..."` 调用模式才需要 `cygpath`,直接 exec 不需要 |
+| 无 bash 时静默退出 | 避免让未安装 Git for Windows 的用户插件失效;hook 上下文注入会被优雅地跳过 |
 
-## Writing Cross-Platform Hook Scripts
+## 编写跨平台 Hook 脚本
 
-Your hook logic goes in the extensionless script file. A few portable patterns:
+你的 hook 逻辑放在无扩展名的脚本文件中。几条可移植的写法:
 
-### Do
-- Use pure bash builtins when possible
-- Use `$(command)` instead of backticks
-- Quote all variable expansions: `"$VAR"`
+### 应该做
+- 尽量使用纯 bash 内建功能
+- 用 `$(command)` 代替反引号
+- 所有变量展开都加引号:`"$VAR"`
 
-### Avoid
-- Relying on PATH-dependent tools without fallbacks (the hook runs without `-l`, so login-shell PATH is not set)
-- Giving scripts a `.sh` extension — this triggers Claude Code's Windows auto-prepend
+### 应该避免
+- 依赖 PATH 中的工具而不提供回退(hook 运行时不带 `-l`,登录 shell 的 PATH 不会被设置)
+- 给脚本加 `.sh` 扩展名 —— 这会触发 Claude Code 的 Windows 自动前置
 
-### Example: JSON escaping without external tools
+### 示例:不借助外部工具进行 JSON 转义
 
 ```bash
 escape_for_json() {
@@ -138,21 +126,21 @@ escape_for_json() {
 }
 ```
 
-## Troubleshooting
+## 故障排查
 
 ### "bash is not recognized"
 
-CMD couldn't find bash in any of the three locations the dispatcher tries. The dispatcher exits silently (0) rather than erroring, so the hook is skipped. Install Git for Windows at the standard path or ensure `bash` is on `PATH`.
+CMD 在 dispatcher 尝试的三个位置都没有找到 bash。dispatcher 会静默退出(0)而不是报错,因此该 hook 被跳过。请在标准路径安装 Git for Windows,或确保 `bash` 在 `PATH` 上。
 
-### Hook runs on Unix but does nothing on Windows
+### Hook 在 Unix 上正常,但在 Windows 上什么也不做
 
-Check that the script filename is **extensionless** in `hooks.json`. A command like `run-hook.cmd session-start.sh` can trigger Claude Code's `.sh` auto-detection and bypass the intended CMD dispatcher path, or just try to run a non-existent `session-start.sh` script.
+检查 `hooks.json` 中的脚本文件名是否**无扩展名**。像 `run-hook.cmd session-start.sh` 这样的命令可能触发 Claude Code 的 `.sh` 自动检测,绕过预期的 CMD dispatcher 路径,或者直接尝试运行一个并不存在的 `session-start.sh` 脚本。
 
-### Hook doesn't fire at all
+### Hook 完全不触发
 
-Verify the `matcher` in `hooks.json` matches the event type your harness emits. Claude Code uses `startup|clear|compact`; Cursor uses `sessionStart`. Check `hooks-cursor.json` for the Cursor variant.
+确认 `hooks.json` 中的 `matcher` 与你的宿主(harness)发出的事件类型匹配。Claude Code 使用 `startup|clear|compact`;Cursor 使用 `sessionStart`。Cursor 变体请查看 `hooks-cursor.json`。
 
-## Related Issues
+## 相关 Issue
 
-- [anthropics/claude-code#9758](https://github.com/anthropics/claude-code/issues/9758) — `.sh` scripts open in editor on Windows
-- [anthropics/claude-code#3417](https://github.com/anthropics/claude-code/issues/3417) — Hooks don't work on Windows
+- [anthropics/claude-code#9758](https://github.com/anthropics/claude-code/issues/9758) —— `.sh` 脚本在 Windows 上被编辑器打开
+- [anthropics/claude-code#3417](https://github.com/anthropics/claude-code/issues/3417) —— Hooks 在 Windows 上无法工作

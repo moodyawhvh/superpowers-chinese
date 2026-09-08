@@ -1,196 +1,117 @@
-# SDD Fix-Loop Redesign — Design Spec
+> 🌐 本文档由 [obra/superpowers](https://github.com/obra/superpowers) 翻译,英文原版见原项目。
 
-**Status:** Approved design (brainstormed with Jesse 2026-07-15); implementation
-plan to follow.
-**Objective:** make the subagent-driven-development skill's review-fix loop
-convergent and autonomous, and make the document readable, without rewriting
-its eval-tuned language.
-**Hard invariant:** existing eval-tuned sentences move; they do not get
-reworded. New machinery ships with drill evidence.
+# SDD 修复循环重设计 — 设计规格
 
-## Problems
+**状态:** 已批准的设计(2026-07-15 与 Jesse 头脑风暴得出);实现计划随后跟进。
+**目标:** 让 subagent-driven-development 技能的评审-修复循环收敛且自治,并让文档可读,同时不重写其经过评测调优的语言。
+**硬性不变量:** 现有经评测调优的句子只做搬移,不改写。新机制附带 drill 证据交付。
 
-Four, all observed in real sessions:
+## 问题
 
-1. **Pathological review loops.** The loop is literally "Repeat until
-   approved" — no round cap. Each re-review is a fresh full review of the
-   whole diff, so a nondeterministic frontier reviewer surfaces new findings
-   every round instead of verifying fixes. Result: implement, review, fix,
-   review, review, fix, review, fix — with no circuit breaker. The
-   strict-cost spec (2026-06-10) independently measured review-loop count as
-   the biggest run-to-run cost variance.
-2. **Contradictory fix policy.** The process diagram and "Constructing
-   Reviewer Prompts" dispatch dedicated fix subagents; Red Flags says
-   "Implementer (same subagent) fixes them"; implementer-prompt.md's "After
-   Review Findings" section assumes the implementer will be re-engaged. Three
-   answers to "who fixes?" in one skill.
-3. **Accreted structure.** Thirteen top-level sections; guidance for one
-   activity is scattered across four of them. "Constructing Reviewer Prompts"
-   is a grab-bag holding reviewer guidance, fix policy, final-review policy,
-   and plan-conflict adjudication.
-4. **Red Flags format.** Seven sibling skills use the `| Excuse | Reality |`
-   rationalization table; SDD carries a 17-bullet "Never" list plus three
-   "If X" mini-blocks.
+四个,全部来自真实会话观察:
 
-## Design Decisions
+1. **病态的评审循环。** 循环的字面表述是"Repeat until approved"——没有轮数上限。每轮复审都是对整个 diff 的全新完整评审,于是不确定性强的边界评审者每轮都会冒出新发现,而不是验证修复。结果:实现、评审、修复、评审、评审、修复、评审、修复——没有熔断器。严格成本规格(2026-06-10)独立测得评审循环轮数是运行间成本方差的最大来源。
+2. **自相矛盾的修复策略。** 流程图和 "Constructing Reviewer Prompts" 分发都指派专门的修复子代理;Red Flags 却说 "Implementer (same subagent) fixes them";implementer-prompt.md 的 "After Review Findings" 一节又假设实现者会被重新唤起。一个技能里对"谁来修"有三种答案。
+3. **堆积的结构。** 十三个顶层章节;同一个活动的指引散落在其中四章。"Constructing Reviewer Prompts" 成了大杂烩,装着评审者指引、修复策略、最终评审策略和计划冲突裁决。
+4. **Red Flags 的格式。** 七个兄弟技能都用 `| Excuse | Reality |` 合理化借口表;SDD 却携带一份 17 条的 "Never" 列表外加三个 "If X" 小块。
 
-| # | Decision | Rationale |
+## 设计决策
+
+| # | 决策 | 理由 |
 |---|----------|-----------|
-| 1 | The original implementer fixes its own review findings — resume it in place. | It already holds the task context; ownership beats a drive-by patcher. Fresh "fix subagents" rebuild context per finding and lack the task frame. |
-| 2 | Re-reviews are scoped to the findings. | Fresh full reviews each round are the churn engine. Scoped re-reviews make the loop structurally convergent; the final whole-branch review remains the broad safety net. |
-| 3 | Circuit breaker at five fix rounds: three resumes, then two fresh dispatches on a more capable model. | Jesse's call. A loop that survives three resumes usually means the implementer cannot see its own problem — the fresh capable dispatch de-anchors and capability-bumps in one move. |
-| 4 | At trip, the controller adjudicates and routes. No new human checkpoint — structural failures reach the existing BLOCKED stop. | SDD's point is autonomous execution. The controller holds the plan and cross-task context the reviewer lacks; the existing text already sanctions it ("adjudicate it in the review loop") without ever specifying the mechanism. |
-| 5 | Reorganize SKILL.md by lifecycle, preserving tuned sentences. | Fixes "hard to follow" at the root. Content moves to its point of use, matching the house direction (recent commits fold recap sections into points of use). |
-| 6 | Convert Red Flags to a `| Excuse | Reality |` rationalization table; relocate hard rules to their points of use. | Matches the other seven skills. Excuses get rebuttals; rules get enforced where the reader acts. |
+| 1 | 由原实现者修复自己的评审发现——原地恢复(resume)它。 | 它已经握有任务上下文;所有权胜过顺路打补丁的人。新起的"修复子代理"要为每个发现重建上下文,而且缺少任务框架。 |
+| 2 | 复审范围限定在各发现本身。 | 每轮全新的完整评审正是返工的发动机。范围化复审让循环在结构上收敛;最终的全分支评审仍是宽域安全网。 |
+| 3 | 熔断器设在五个修复轮:三次恢复原实现者,再用更强模型新派两次。 | Jesse 的决断。撑过三次恢复的循环通常意味着实现者看不见自己的问题——新鲜且更强的分发一次完成去锚定和能力提升。 |
+| 4 | 熔断触发时,由控制器裁决并路由。不新增人工检查点——结构性失败走现有的 BLOCKED 停止。 | SDD 的核心价值就是自治执行。控制器握有评审者所缺的计划和跨任务上下文;现有文本已经授权它("adjudicate it in the review loop"),只是一直没写明机制。 |
+| 5 | 按生命周期重组 SKILL.md,保留调优过的句子。 | 从根上解决"难以跟随"。内容移到使用点,与项目一贯方向一致(近期的提交就在把回顾章节折叠进使用点)。 |
+| 6 | 把 Red Flags 转成 `| Excuse | Reality |` 合理化借口表;硬规则迁到各自的使用点。 | 与其余七个技能对齐。借口配反驳;规则在使用者行动之处生效。 |
 
-## The Fix Loop
+## 修复循环
 
-Trigger: a task review returns spec ❌ or any Critical/Important finding.
+触发条件:任务评审返回规格 ❌ 或任何 Critical/Important 发现。
 
-**Rounds 1–3 — resume the original implementer.** Send the findings verbatim
-(Critical/Important plus spec gaps). The implementer fixes, re-runs the
-covering tests, appends the fix report to its existing report file, and
-returns the short contract. On a harness without agent resume, a "resume" is
-a fresh dispatch carrying the brief, the report file, and the findings — the
-report file is the persistent memory either way.
+**第 1-3 轮——恢复原实现者。** 原样转发各发现(Critical/Important 加上规格缺口)。实现者修复、重跑覆盖测试、把修复报告追加到它已有的报告文件,并返回简短契约。在不支持代理恢复的宿主上,"恢复"就是一次携带任务简报、报告文件和各发现的新分发——无论哪种方式,报告文件就是持久记忆。
 
-**Rounds 4–5 — fresh implementer, more capable model.** Full task context:
-brief, report file, open findings, and the framing "a prior implementer
-attempted this N times; you own the task now."
+**第 4-5 轮——新实现者,更强模型。** 提供完整任务上下文:简报、报告文件、未决发现,以及定调"前一个实现者已尝试 N 次;现在这个任务归你了"。
 
-**Every round's re-review is scoped.** The re-reviewer receives the brief,
-the updated report, the original findings list, and a fix-scoped diff package
-(`review-package FIX_BASE HEAD`, where FIX_BASE is the head the reviewer
-last reviewed; the script already takes arbitrary ranges).
-It verdicts each finding addressed / not addressed and flags new breakage in
-the fix diff only. Novel findings on code the fix did not touch are reported
-as non-blocking; the controller ledgers them for the final review.
+**每轮复审都是范围化的。** 复审者收到简报、更新后的报告、原始发现列表,以及一个修复范围 diff 包(`review-package FIX_BASE HEAD`,其中 FIX_BASE 是评审者上次评审的 head;脚本本就支持任意区间)。它对每个发现判定已解决/未解决,且只对修复 diff 中的新破坏亮旗。修复未触及代码上的新发现按非阻塞上报;控制器把它们记入台账留给最终评审。
 
-**Fix-report completeness gate (existing rule, kept):** before dispatching a
-re-review, confirm the fix report names the covering tests, the command run,
-and the output.
+**修复报告完整性门(现有规则,保留):** 在派发复审前,确认修复报告写明了覆盖测试、所运行的命令及其输出。
 
-**No early exit.** The controller never adjudicates before the cap — an early
-exit reopens the "pre-judge findings to spare yourself a review loop" hole
-the current content deliberately closed. One exception, unchanged from
-today: a finding that conflicts with what the plan's text mandates goes to
-the human immediately (plan authority, not loop churn).
+**不提前退出。** 在熔断触发前控制器绝不裁决——提前退出会重新打开"预判发现以免掉一轮评审"的漏洞,而现有内容正是刻意堵住它的。唯一例外,与今天一致:与计划文本规定相冲突的发现立即上报人工(计划权威,而非循环内耗)。
 
-**Minor findings** never enter the loop: ledger them as they arrive (existing
-rule, kept).
+**次要发现**从不进入循环:到达即记台账(现有规则,保留)。
 
-### Adjudication at Trip
+### 熔断时的裁决
 
-After round five fails, the controller stops dispatching and judges each open
-finding against the brief, the plan, and cross-task context:
+第五轮失败后,控制器停止派发,对照简报、计划和跨任务上下文逐一裁决未决发现:
 
-- **Contested or wrong** → ledger with a one-line adjudication ("controller:
-  reviewer wrong because X"), continue. The final review sees both sides.
-- **Real, not load-bearing** → ledger as known-open, continue. Later
-  dispatches touching that area carry a pointer to the entry.
-- **Real and load-bearing** (later tasks build on it, or it reveals a plan
-  defect) → the existing BLOCKED stop. Park-and-continue defers a structural
-  failure to the most expensive point and lets dependents build on it, so
-  structural failures stop the run — through the stop condition that already
-  exists, not a new checkpoint.
+- **有争议或评审有误** → 记台账并附一行裁决理由("controller: reviewer wrong because X"),继续。最终评审会看到双方说法。
+- **真实但不承重** → 按已知未决记台账,继续。后续触及该区域的分发携带指向该条目的指针。
+- **真实且承重**(后续任务依赖它,或它暴露了计划缺陷)→ 走现有 BLOCKED 停止。"先搁置再继续"会把结构性失败拖到代价最高的时点,还让依赖方在坏地基上继续搭建——所以结构性失败必须停跑——通过已存在的停止条件,而不是新检查点。
 
-Every adjudication is a ledger entry. Silent discards stay forbidden.
+每次裁决都是一条台账记录。静默丢弃依旧被禁止。
 
-## Document Restructure
+## 文档重组
 
-New skeleton, in execution order:
+新骨架,按执行顺序:
 
-1. Intro — why subagents, core principle, narration, continuous execution
-2. When to Use — unchanged, including the decision graph
-3. The Process — diagram updated for the new loop
-4. Setup — worktree, ledger check/resume, pre-flight plan review, todos
-5. Model Selection — stays one cross-cutting section; every dispatch
-   consults it, so folding it into points of use would repeat it five times
-6. The Task Loop — five numbered steps:
-   1. Dispatch the implementer (task-brief script, five-part dispatch
-      composition, model line required)
-   2. Handle the report (DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED)
-   3. Review the task (review-package script, reviewer dispatch composition,
-      constraints lens, no pre-judging, ⚠️ handling)
-   4. Fix loop (the machinery above)
-   5. Complete the task (ledger append, todo update)
-7. Final Review — package, model pin, one fix wave, one scoped re-review,
-   adjudication
-8. Finish — finishing-a-development-branch
-9. Common Rationalizations — the table
-10. Example Workflow — updated to show a resume-based fix round and the
-    breaker not tripping
+1. 简介——为什么用子代理、核心原则、叙述方式、持续执行
+2. 何时使用——不变,含决策图
+3. 流程——流程图按新循环更新
+4. 准备——worktree、台账检查/恢复、飞行前计划评审、todos
+5. 模型选择——保持为单一的横切章节;每次分发都要参考它,折叠进各使用点会重复五遍
+6. 任务循环——五个编号步骤:
+   1. 派发实现者(task-brief 脚本、五段式分发构成、必须带模型行)
+   2. 处理报告(DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED)
+   3. 评审任务(review-package 脚本、评审者分发构成、约束透镜、不许预判、⚠️ 处理)
+   4. 修复循环(上述机制)
+   5. 完成任务(台账追加、todo 更新)
+7. 最终评审——打包、固定模型、一轮修复、一次范围化复审、裁决
+8. 收尾——finishing-a-development-branch
+9. 常见合理化借口——该表
+10. 示例工作流——更新为展示一次基于恢复的修复轮以及熔断器未触发的情形
 
-"Constructing Reviewer Prompts," "File Handoffs," and "Durable Progress"
-dissolve into the steps where each rule applies. Every eval-tuned sentence
-lands in exactly one new location; a move map in the implementation plan
-tracks source → destination so review can verify nothing was dropped or
-reworded.
+"Constructing Reviewer Prompts"、"File Handoffs" 和 "Durable Progress" 溶解进各自规则适用的步骤。每句经评测调优的句子都恰好落在一个新位置;实现计划中的搬移映射表跟踪源 → 目标,让评审能核实没有遗漏、没有改写。
 
-## Rationalization Table
+## 合理化借口表
 
-Excuse-shaped Never items convert to rows; new rows cover the loop
-pathology. Draft rows (final wording at implementation):
+借口形状的 Never 条目转为表格行;新增行覆盖循环病态。以下为草拟行(最终措辞在实现时确定):
 
-| Excuse | Reality |
+| 借口 | 现实 |
 |--------|---------|
-| "Close enough on spec compliance" | Reviewer found gaps = not done. |
-| "I'll fix it myself, dispatching is overhead" | Controller fixes pollute your context and skip review. Resume the implementer. |
-| "One more round will converge" | Past the cap, rounds don't converge. Adjudicate. |
-| "The reviewer will just find something new anyway" | Scoped re-reviews check fixes, not taste. New findings on untouched code go to the ledger, not the loop. |
-| "This finding is obviously wrong, I'll drop it" | You adjudicate only at the cap, and every adjudication is a ledger entry. Silent discards are forbidden. |
-| "The fix was small, skip the re-review" | Unreviewed fixes are how regressions land. |
+| "规格符合度差不多了" | 评审者发现缺口 = 没完成。 |
+| "我自己修就行,派发是额外开销" | 控制器亲自修会污染你的上下文,还跳过了评审。恢复实现者。 |
+| "再来一轮总会收敛的" | 过了上限,轮次不再收敛。去裁决。 |
+| "反正评审者总会找出新东西" | 范围化复审查的是修复,不是品味。未触及代码上的新发现进台账,不进循环。 |
+| "这条发现明显是错的,我直接丢掉" | 你只能在熔断点裁决,且每次裁决都是一条台账记录。静默丢弃被禁止。 |
+| "修复很小,跳过复审吧" | 未评审的修复正是回归落地的通道。 |
 
-Hard rules that are not excuses (never parallel implementers, never dispatch
-a reviewer without a diff file, model line required, never re-dispatch
-ledger-complete tasks) move to their points of use.
+不属于借口的硬规则(绝不开并行实现者、绝不在没有 diff 文件时派发评审者、必须带模型行、绝不重新派发台账已完备的任务)移到各自的使用点。
 
-## Prompt Templates
+## 提示词模板
 
-- **implementer-prompt.md** — "After Review Findings" rewritten for resume
-  semantics: you will be resumed with findings; fix, re-run covering tests,
-  append to your report file, return the short contract.
-- **task-reviewer-prompt.md** — initial review only; the trailing re-review
-  sentence moves out.
-- **re-review-prompt.md (new)** — the scoped re-review contract: inputs are
-  brief, updated report, original findings, fix-scoped diff package; output
-  is a per-finding verdict (addressed / not addressed), new breakage in the
-  fix diff, and non-blocking observations outside it. A separate template
-  because it is a different contract — overloading the full-review template
-  produced the current ambiguity.
-- **Takeover dispatch (rounds 4–5)** — composed from implementer-prompt.md
-  plus SKILL.md guidance (brief, report path, open findings, takeover
-  framing); no new template file.
+- **implementer-prompt.md** — "After Review Findings" 按恢复语义重写:你会带着发现被恢复;修复、重跑覆盖测试、追加到你的报告文件、返回简短契约。
+- **task-reviewer-prompt.md** — 仅用于初次评审;结尾那句复审移走。
+- **re-review-prompt.md(新增)** — 范围化复审的契约:输入为简报、更新后的报告、原始发现、修复范围 diff 包;输出为逐发现的判定(已解决/未解决)、修复 diff 中的新破坏、以及修复之外的非阻塞观察。单独成模板,因为它是不同的契约——往完整评审模板里塞东西正是当前歧义的来源。
+- **接管分发(第 4-5 轮)** — 由 implementer-prompt.md 加 SKILL.md 指引构成(简报、报告路径、未决发现、接管定调);不新建模板文件。
 
-## Final Review Loop
+## 最终评审循环
 
-Unchanged: merge-base package, most capable model, ONE fixer with the
-complete findings list. New: exactly one scoped re-review of the fix wave,
-then controller adjudication. Residual load-bearing findings surface at
-finishing-a-development-branch, where the human already is. The end of the
-branch gets a bounded loop too.
+不变:merge-base 打包、最强模型、唯一一名修复者拿着完整发现列表。新增:对修复波次做恰好一次范围化复审,然后由控制器裁决。残留的承重发现在 finishing-a-development-branch 处浮现——那里本来就有人。分支的末端同样得到有界的循环。
 
-## Evals
+## 评测
 
-Three new drill scenarios in `evals/`:
+在 `evals/` 中新增三个 drill 场景:
 
-1. **Resume, don't re-dispatch:** a task review returns findings; the
-   controller must resume the same implementer rather than dispatch a fix
-   subagent.
-2. **Breaker trips:** a seeded never-satisfied reviewer; the controller must
-   stop dispatching after the fifth round fails, adjudicate, ledger, and
-   continue — not loop.
-3. **Structural finding stops:** a load-bearing finding (later tasks depend
-   on it); the controller must stop via BLOCKED rather than park.
+1. **恢复,不要重派:** 任务评审返回发现;控制器必须恢复同一个实现者,而不是派发修复子代理。
+2. **熔断触发:** 植入一个永不满足的评审者;控制器必须在第五轮失败后停止派发、裁决、记台账并继续——而不是继续循环。
+3. **结构性发现停跑:** 一个承重发现(后续任务依赖它);控制器必须通过 BLOCKED 停止,而不是搁置继续。
 
-Plus before/after runs of the existing SDD scenarios to catch regressions
-from the reorganization.
+另外对现有 SDD 场景做修改前/后的运行,以捕捉重组引入的回归。
 
-## Non-Goals
+## 非目标
 
-- Ledger session-scoping — PR #1943 owns it. This work touches the same
-  sections, so the implementation plan notes the collision risk.
-- Script changes — task-brief and review-package already do what the new
-  loop needs.
-- Changes to executing-plans or requesting-code-review beyond the final-
-  review pointer continuing to resolve.
+- 台账的会话级作用域——PR #1943 负责。本工作触及同样的章节,实现计划会标注冲突风险。
+- 脚本变更——task-brief 和 review-package 已能满足新循环所需。
+- 对 executing-plans 或 requesting-code-review 的变更(最终评审指针继续可解析不受限)。

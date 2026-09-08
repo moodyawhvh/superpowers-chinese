@@ -1,88 +1,90 @@
-# Superpowers for Kimi Code
+> 🌐 本文档由 [obra/superpowers](https://github.com/obra/superpowers) 翻译,英文原版见原项目。
 
-Complete guide for using Superpowers with [Kimi Code](https://github.com/MoonshotAI/kimi-code).
+# Kimi Code 的 Superpowers
 
-## Installation
+在 [Kimi Code](https://github.com/MoonshotAI/kimi-code) 中使用 Superpowers 的完整指南。
 
-Superpowers is available in Kimi Code's plugin marketplace.
+## 安装
 
-Open the plugin manager:
+Superpowers 已上架 Kimi Code 的插件市场。
+
+打开插件管理器:
 
 ```text
 /plugins
 ```
 
-Go to `Marketplace` > `Superpowers` and install it.
+进入 `Marketplace` > `Superpowers` 并安装。
 
-You can also install from this repository:
+也可以直接从本仓库安装:
 
 ```text
 /plugins install https://github.com/obra/superpowers
 ```
 
-For unreleased validation against `dev`, pin the branch explicitly:
+若要在正式发布前基于 `dev` 分支做验证,请显式指定分支:
 
 ```text
 /plugins install https://github.com/obra/superpowers/tree/dev
 ```
 
-Kimi Code applies plugin changes to new sessions. After installing, updating, enabling, disabling, or reloading a plugin, start a fresh session with `/new`.
+Kimi Code 只在新会话中应用插件变更。安装、更新、启用、禁用或重载插件之后,请用 `/new` 开启新会话。
 
-## How It Works
+## 工作原理
 
-The Kimi plugin manifest lives at `.kimi-plugin/plugin.json`.
+Kimi 插件的清单文件位于 `.kimi-plugin/plugin.json`。
 
-The manifest does three things:
+这个清单做三件事:
 
-1. Points Kimi Code at the existing `skills/` directory.
-2. Loads `using-superpowers` at session start through `sessionStart.skill`.
-3. Provides Kimi-specific tool mapping through `skillInstructions`.
+1. 让 Kimi Code 指向现有的 `skills/` 目录。
+2. 通过 `sessionStart.skill` 在会话开始时加载 `using-superpowers`。
+3. 通过 `skillInstructions` 提供 Kimi 专属的工具映射。
 
-Kimi Code reads Superpowers skills from this repository. There are no copied skills, symlinks, hooks, or extra runtime dependencies.
+Kimi Code 直接从本仓库读取 Superpowers 技能,没有复制的技能、符号链接、hook,也没有额外的运行时依赖。
 
-## Tool Mapping
+## 工具映射
 
-Skills describe actions instead of hard-coding one runtime's tool names. On Kimi Code these resolve to:
+技能以动作来描述,而不是硬编码某个运行时的工具名。在 Kimi Code 中,这些动作解析为:
 
-- "Ask the user" / "ask clarifying questions" -> `AskUserQuestion`
-- "Create a todo" / "mark complete in todo list" -> `TodoList`
-- "Dispatch a subagent" -> `Agent`
-- "Invoke a skill" -> Kimi Code's native `Skill` tool
-- "Read a file" / "write a file" / "edit a file" -> `Read`, `Write`, `Edit`
-- "Run a shell command" -> `Bash`
-- "Search file contents" -> `Grep`
-- "Find files by path or pattern" -> `Glob`
-- "Fetch a URL" -> `FetchURL`
-- "Search the web" -> `WebSearch`
+- "询问用户" / "提出澄清问题" -> `AskUserQuestion`
+- "创建 todo" / "在 todo 列表中标记完成" -> `TodoList`
+- "派发子代理" -> `Agent`
+- "调用技能" -> Kimi Code 原生的 `Skill` 工具
+- "读取文件" / "写入文件" / "编辑文件" -> `Read`、`Write`、`Edit`
+- "运行 shell 命令" -> `Bash`
+- "搜索文件内容" -> `Grep`
+- "按路径或模式查找文件" -> `Glob`
+- "抓取 URL" -> `FetchURL`
+- "搜索网络" -> `WebSearch`
 
-## Updating
+## 更新
 
-Use Kimi Code's plugin manager:
+使用 Kimi Code 的插件管理器:
 
 ```text
 /plugins
 ```
 
-Select Superpowers and update it from there. Start a fresh session with `/new` after updating.
+选中 Superpowers 并在其中执行更新。更新完成后用 `/new` 开启新会话。
 
-## Troubleshooting
+## 故障排查
 
-### Plugin not loading
+### 插件未加载
 
-1. Run `/plugins info superpowers` and check diagnostics.
-2. Make sure the plugin is enabled.
-3. Start a fresh session with `/new` after install or update.
+1. 运行 `/plugins info superpowers` 并查看诊断信息。
+2. 确认插件已启用。
+3. 安装或更新后,用 `/new` 开启新会话。
 
-### Direct GitHub install used an old release
+### 从 GitHub 直接安装时装到了旧版本
 
-Kimi Code installs the latest GitHub release for a bare repository URL when one exists. To test unreleased changes before the next Superpowers release, install the branch explicitly:
+对于裸仓库 URL,只要存在 GitHub release,Kimi Code 就会安装最新的 release。要在 Superpowers 发布前测试未发布的改动,请显式安装分支:
 
 ```text
 /plugins install https://github.com/obra/superpowers/tree/dev
 ```
 
-### Skills not triggering
+### 技能未触发
 
-1. Confirm `/plugins info superpowers` shows the plugin enabled.
-2. Start a fresh session with `/new`.
-3. Try the acceptance prompt: `Let's make a react todo list`. A working install should load `brainstorming` before writing code.
+1. 确认 `/plugins info superpowers` 显示插件已启用。
+2. 用 `/new` 开启新会话。
+3. 试试这条验收提示词:`Let's make a react todo list`。安装正常时,应当在写代码之前先加载 `brainstorming`。

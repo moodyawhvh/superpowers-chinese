@@ -2,48 +2,48 @@
 #
 # sync-to-codex-plugin.sh
 #
-# Sync this superpowers checkout → prime-radiant-inc/openai-codex-plugins.
-# Clones the fork fresh into a temp dir, rsyncs tracked upstream plugin content
-# (including committed Codex files under .codex-plugin/ and assets/), preserves
-# OpenAI-owned marketplace metadata already in the destination plugin, commits,
-# pushes a sync branch, and opens a PR.
-# Path/user agnostic — auto-detects upstream from script location.
+# 将本 superpowers 检出同步 → prime-radiant-inc/openai-codex-plugins。
+# 在临时目录中全新克隆该 fork,rsync 上游已跟踪的插件内容
+# (包括提交在 .codex-plugin/ 和 assets/ 下的 Codex 文件),保留
+# 目标插件中已有的 OpenAI 所属市场元数据,然后提交、
+# 推送同步分支,并创建 PR。
+# 与路径/用户无关 —— 从脚本所在位置自动检测上游。
 #
-# Deterministic: running twice against the same upstream SHA produces PRs with
-# identical diffs, so two back-to-back runs can verify the tool itself.
+# 确定性:对同一上游 SHA 运行两次会产出 diff 完全相同的 PR,
+# 因此连续两次运行即可验证工具本身的行为。
 #
 # Usage:
-#   ./scripts/sync-to-codex-plugin.sh                              # full run
-#   ./scripts/sync-to-codex-plugin.sh -n                           # dry run
-#   ./scripts/sync-to-codex-plugin.sh -y                           # skip confirm
-#   ./scripts/sync-to-codex-plugin.sh --local PATH                 # existing checkout
-#   ./scripts/sync-to-codex-plugin.sh --base BRANCH                # default: main
-#   ./scripts/sync-to-codex-plugin.sh --bootstrap                  # create plugin dir if missing
+#   ./scripts/sync-to-codex-plugin.sh                              # 完整执行
+#   ./scripts/sync-to-codex-plugin.sh -n                           # 试运行
+#   ./scripts/sync-to-codex-plugin.sh -y                           # 跳过确认
+#   ./scripts/sync-to-codex-plugin.sh --local PATH                 # 使用现有检出
+#   ./scripts/sync-to-codex-plugin.sh --base BRANCH                # 默认: main
+#   ./scripts/sync-to-codex-plugin.sh --bootstrap                  # 插件目录缺失时创建
 #
-# Bootstrap mode: skips the "plugin must exist on base" requirement and creates
-# plugins/superpowers/ when absent, then copies the tracked plugin files from
-# upstream just like a normal sync.
+# Bootstrap 模式:跳过"插件必须已存在于 base 分支"的要求,并在缺失时
+# 创建 plugins/superpowers/,然后像普通同步一样从上游复制已跟踪的
+# 插件文件。
 #
 # Requires: bash, rsync, git, gh (authenticated), python3.
 
 set -euo pipefail
 
 # =============================================================================
-# Config — edit as upstream or canonical plugin shape evolves
+# 配置 —— 随上游或标准插件结构的演进而修改
 # =============================================================================
 
 FORK="prime-radiant-inc/openai-codex-plugins"
 DEFAULT_BASE="main"
 DEST_REL="plugins/superpowers"
 
-# Paths in upstream that should NOT land in the embedded plugin.
-# All patterns use a leading "/" to anchor them to the source root.
-# Unanchored patterns like "scripts/" would match any directory named
-# "scripts" at any depth — including legitimate nested dirs like
-# skills/brainstorming/scripts/. Anchoring prevents that.
-# (.DS_Store is intentionally unanchored — Finder creates them everywhere.)
+# 上游中不应进入内嵌插件的路径。
+# 所有模式都以 "/" 开头,锚定到源根目录。
+# 未锚定的模式(如 "scripts/")会匹配任意深度下任何名为
+# "scripts" 的目录 —— 包括像 skills/brainstorming/scripts/ 这样的
+# 合法嵌套目录。锚定可以避免这种情况。
+# (.DS_Store 特意不锚定 —— Finder 到处都会生成它。)
 EXCLUDES=(
-  # Dotfiles and infra — top-level only
+  # 点文件与基础设施 —— 仅限顶层
   "/.claude/"
   "/.claude-plugin/"
   "/.codex/"
@@ -62,7 +62,7 @@ EXCLUDES=(
   "/.worktrees/"
   ".DS_Store"
 
-  # Root ceremony files
+  # 根目录的约定性文件
   "/AGENTS.md"
   "/CHANGELOG.md"
   "/CLAUDE.md"
@@ -71,7 +71,7 @@ EXCLUDES=(
   "/gemini-extension.json"
   "/package.json"
 
-  # Directories not shipped by canonical Codex plugins
+  # 标准 Codex 插件不随附的目录
   "/commands/"
   "/docs/"
   "/evals/"
@@ -82,7 +82,7 @@ EXCLUDES=(
 )
 
 # =============================================================================
-# Ignored-path helpers
+# 被忽略路径的辅助函数
 # =============================================================================
 
 IGNORED_DIR_EXCLUDES=()
@@ -133,7 +133,7 @@ append_git_ignored_file_excludes() {
 }
 
 # =============================================================================
-# Args
+# 参数
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -162,7 +162,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # =============================================================================
-# Preflight
+# 预检查
 # =============================================================================
 
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -177,7 +177,7 @@ gh auth status >/dev/null 2>&1 || die "gh not authenticated — run 'gh auth log
 [[ -d "$UPSTREAM/.git" ]]         || die "upstream '$UPSTREAM' is not a git checkout"
 [[ -f "$UPSTREAM/.codex-plugin/plugin.json" ]] || die "committed Codex manifest missing at $UPSTREAM/.codex-plugin/plugin.json"
 
-# Read the upstream version from the committed Codex manifest.
+# 从已提交的 Codex 清单中读取上游版本号。
 UPSTREAM_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$UPSTREAM/.codex-plugin/plugin.json")"
 [[ -n "$UPSTREAM_VERSION" ]] || die "could not read 'version' from committed Codex manifest"
 
@@ -205,7 +205,7 @@ if [[ -n "$UPSTREAM_STATUS" ]]; then
 fi
 
 # =============================================================================
-# Prepare destination (clone fork fresh, or use --local)
+# 准备目标仓库(全新克隆 fork,或使用 --local)
 # =============================================================================
 
 CLEANUP_DIR=""
@@ -315,7 +315,7 @@ else
 fi
 
 # =============================================================================
-# Build rsync args
+# 构建 rsync 参数
 # =============================================================================
 
 RSYNC_ARGS=(-av --delete --delete-excluded)
@@ -354,7 +354,7 @@ prepare_sync_source() {
 prepare_sync_source "$PREVIEW_DEST"
 
 # =============================================================================
-# Dry run preview (always shown)
+# 试运行预览(始终显示)
 # =============================================================================
 
 echo ""
@@ -379,7 +379,7 @@ if [[ $DRY_RUN -eq 1 ]]; then
 fi
 
 # =============================================================================
-# Apply
+# 应用
 # =============================================================================
 
 echo ""
@@ -407,7 +407,7 @@ if [[ $BOOTSTRAP -eq 1 ]]; then
 fi
 rsync "${RSYNC_ARGS[@]}" "$SYNC_SOURCE/" "$DEST/"
 
-# Bail early if nothing actually changed
+# 若实际没有任何变化则提前退出
 cd "$DEST_REPO"
 if [[ -z "$(git status --porcelain "$DEST_REL")" ]]; then
   echo "No changes — embedded plugin was already in sync with upstream $UPSTREAM_SHORT (v$UPSTREAM_VERSION)."
@@ -415,7 +415,7 @@ if [[ -z "$(git status --porcelain "$DEST_REL")" ]]; then
 fi
 
 # =============================================================================
-# Commit, push, open PR
+# 提交、推送、创建 PR
 # =============================================================================
 
 git add "$DEST_REL"
